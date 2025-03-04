@@ -16,6 +16,8 @@ import re
 import os
 import subprocess
 import sys
+from hip import hip
+from hip import hiprtc
 
 from dataclasses import dataclass
 from typing import Callable, Iterable, List, Sequence, Optional, Tuple, TypeVar, Union
@@ -406,15 +408,14 @@ async def runConfig(paramIter: Iterable[IterType],
     return len(failures) == 0
 
 def getArch():
-    p = subprocess.run(["/opt/rocm/bin/rocm_agent_enumerator", "-name"], check=True,
-                       stdout=subprocess.PIPE)
-    agents = set(x.decode("utf-8") for x in p.stdout.split())
-    if not agents:
-        # TODO: Remove this workaround for a bug in rocm_agent_enumerator -name
-        # Once https://github.com/RadeonOpenCompute/rocminfo/pull/59 lands
-        q = subprocess.run(["/opt/rocm/bin/rocm_agent_enumerator"],
-                              check=True, stdout=subprocess.PIPE)
-        agents = set(x.decode("utf-8") for x in q.stdout.split() if x != b"gfx000")
+    agents = set()
+    _, device_count = hip.hipGetDeviceCount()
+    for device in range(device_count):
+        props = hip.hipDeviceProp_t()
+        hip.hipGetDeviceProperties(props,device)
+        agent = props.gcnArchName.decode('utf-8')
+        agents.add(agent) if agent != "gfx000" else None
+
     return agents
 
 def main() -> bool:

@@ -1,5 +1,7 @@
 import os
 import subprocess
+from hip import hip
+from hip import hiprtc
 
 
 # Helper function to decode arch to its features
@@ -45,16 +47,15 @@ def get_arch_features(arch: str):
 
 def get_agents(rocm_path):
     if os.name != 'nt':
-        p = subprocess.run([rocm_path + "/bin/rocm_agent_enumerator", "-name"],
-                           check=True, stdout=subprocess.PIPE)
-        agents = set(x.decode("utf-8") for x in p.stdout.split())
-        if not agents or not all(agent.startswith("gfx") for agent in agents):
-            # TODO: Remove this workaround for a bug in rocm_agent_enumerator -name
-            # Once https://github.com/RadeonOpenCompute/rocminfo/pull/59 lands
-            q = subprocess.run([rocm_path + "/bin/rocm_agent_enumerator"],
-                               check=True, stdout=subprocess.PIPE)
-            agents = set(x.decode("utf-8") for x in q.stdout.split())
-        return set(a for a in agents if a != "gfx000")
+        agents = set()
+        _, device_count = hip.hipGetDeviceCount()
+        for device in range(device_count):
+            props = hip.hipDeviceProp_t()
+            hip.hipGetDeviceProperties(props,device)
+            agent = props.gcnArchName.decode('utf-8')
+            agents.add(agent) if agent != "gfx000" else None
+
+    return agents
     else:
         p = subprocess.run([rocm_path + "/bin/amdgpu_arch.exe"],
                            check=True, stdout=subprocess.PIPE, shell=True)

@@ -18,6 +18,8 @@ from dataclasses import dataclass
 from typing import Optional, Dict, Tuple
 import numpy as np
 import pandas as pd
+from hip import hip
+from hip import hiprtc
 
 import reportUtils
 from perfCommonUtils import Operation, GEMMLibrary
@@ -1243,24 +1245,28 @@ def tuneMLIRKernels(configs, arch, numCU):
 def is_xdlops_present() -> bool:
     """This function checks whether a GPU with xdlops support is present"""
     xdlop_supported_gpus = ['gfx908', 'gfx90a', 'gfx942', 'gfx950']
-    xdlop_supported_gpus_str = xdlop_supported_gpus[0]
-    for gpu in xdlop_supported_gpus[1:]:
-        xdlop_supported_gpus_str += '|' + gpu
-    r = subprocess.run(f"/opt/rocm/bin/rocm_agent_enumerator -t GPU | grep -q -E '{xdlop_supported_gpus_str}'",
-                       check=True, shell=True)
-    if r.returncode == 0:
-        return True
+    _, device_count = hip.hipGetDeviceCount()
+    for device in range(device_count):
+        props = hip.hipDeviceProp_t()
+        hip.hipGetDeviceProperties(props,device)
+        agent = props.gcnArchName.decode('utf-8')
+
+        if agent in xdlop_supported_gpus:
+            return True
+    
     return False
 
+
+
 def getArch():
-    p = subprocess.run(["/opt/rocm/bin/rocm_agent_enumerator", "-name"], check=True,
-                       stdout=subprocess.PIPE)
-    agents = set(x.decode("utf-8") for x in p.stdout.split())
-    if not agents or not all(agent.startswith("gfx") for agent in agents):
-        # "rocm_agent_enumerator -name" may time out or fail.
-        q = subprocess.run(["/opt/rocm/bin/rocm_agent_enumerator"],
-                              check=True, stdout=subprocess.PIPE)
-        agents = set(x.decode("utf-8") for x in q.stdout.split() if x != b"gfx000")
+    agents = set()
+    _, device_count = hip.hipGetDeviceCount()
+    for device in range(device_count):
+        props = hip.hipDeviceProp_t()
+        hip.hipGetDeviceProperties(props,device)
+        agent = props.gcnArchName.decode('utf-8')
+        agents.add(agent) if agent != "gfx000" else None
+
     return agents
 
 def parseDataTypes(data_types):
