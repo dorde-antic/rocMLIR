@@ -19,7 +19,6 @@ from typing import Optional, Dict, Tuple
 import numpy as np
 import pandas as pd
 from hip import hip
-from hip import hiprtc
 
 import reportUtils
 from perfCommonUtils import Operation, GEMMLibrary
@@ -1244,12 +1243,16 @@ def tuneMLIRKernels(configs, arch, numCU):
 
 def getArch():
     agents = set()
-    _, device_count = hip.hipGetDeviceCount()
+    err_code, device_count = hip.hipGetDeviceCount()
+    if err_code != hip.hipSuccess:
+        raise Exception(f"Hip call hipGetDeviceCount not successful: {err_code}")
     for device in range(device_count):
         props = hip.hipDeviceProp_t()
-        hip.hipGetDeviceProperties(props,device)
+        err_code = hip.hipGetDeviceProperties(props,device)
+        if err_code != hip.hipSuccess:
+            raise Exception(f"Hip call hipGetDeviceProperties not successful: {err_code}")
         agent = props.gcnArchName.decode('utf-8')
-        agents.add(agent) if agent != "gfx000" else None
+        agents.add(agent)
 
     return agents
 

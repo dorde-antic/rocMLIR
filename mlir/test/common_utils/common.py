@@ -61,19 +61,4 @@ def get_agents():
 
 def is_xdlops_present() -> bool:
     """This function checks whether a GPU with xdlops support is present"""
-    xdlop_supported_gpus = ['gfx908', 'gfx90a', 'gfx942', 'gfx950']
-    err_code, device_count = hip.hipGetDeviceCount()
-    if err_code != hip.hipSuccess:
-        raise Exception(f"Hip call hipGetDeviceCount not successful: {err_code}")
-    for device in range(device_count):
-        props = hip.hipDeviceProp_t()
-        err_code = hip.hipGetDeviceProperties(props,device)
-        if err_code != hip.hipSuccess:
-            raise Exception(f"Hip call hipGetDeviceProperties not successful: {err_code}")
-        agent = props.gcnArchName.decode('utf-8')
-
-        if agent in xdlop_supported_gpus:
-            return True
-    
-    return False
-    
+    return any([agent.startswith("gfx9") for agent in get_agents()])
