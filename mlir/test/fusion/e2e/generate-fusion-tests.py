@@ -8,21 +8,25 @@ import itertools
 import tomli
 import subprocess
 from hip import hip
-from hip import hiprtc
 
 RANDTYPE = {'f32' : 'float',
             'f16' : 'float',
             'bf16' : 'float',
             'i32' : 'int',
             'i8' : 'int'}
+            
 def getArch():
     agents = set()
-    _, device_count = hip.hipGetDeviceCount()
+    err_code, device_count = hip.hipGetDeviceCount()
+    if err_code != hip.hipSuccess:
+        raise Exception(f"Hip call hipGetDeviceCount not successful: {err_code}")
     for device in range(device_count):
         props = hip.hipDeviceProp_t()
-        hip.hipGetDeviceProperties(props,device)
+        err_code = hip.hipGetDeviceProperties(props,device)
+        if err_code != hip.hipSuccess:
+            raise Exception(f"Hip call hipGetDeviceProperties not successful: {err_code}")
         agent = props.gcnArchName.decode('utf-8')
-        agents.add(agent) if agent != "gfx000" else None
+        agents.add(agent)
 
     return agents
 

@@ -1242,22 +1242,6 @@ def tuneMLIRKernels(configs, arch, numCU):
                 print("MIOpen tuning timed out")
                 _, errs = p1.communicate()
 
-def is_xdlops_present() -> bool:
-    """This function checks whether a GPU with xdlops support is present"""
-    xdlop_supported_gpus = ['gfx908', 'gfx90a', 'gfx942', 'gfx950']
-    _, device_count = hip.hipGetDeviceCount()
-    for device in range(device_count):
-        props = hip.hipDeviceProp_t()
-        hip.hipGetDeviceProperties(props,device)
-        agent = props.gcnArchName.decode('utf-8')
-
-        if agent in xdlop_supported_gpus:
-            return True
-    
-    return False
-
-
-
 def getArch():
     agents = set()
     _, device_count = hip.hipGetDeviceCount()

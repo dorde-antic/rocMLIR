@@ -16,8 +16,6 @@ import re
 import os
 import subprocess
 import sys
-from hip import hip
-from hip import hiprtc
 
 from dataclasses import dataclass
 from typing import Callable, Iterable, List, Sequence, Optional, Tuple, TypeVar, Union
@@ -25,6 +23,7 @@ from typing import Callable, Iterable, List, Sequence, Optional, Tuple, TypeVar,
 import perfRunner
 from perfRunner import ConvConfiguration
 from perfRunner import Paths
+from perfRunner import getArch
 from perfCommonUtils import CORRECT_RESULT_RE
 
 @dataclass(frozen=True)
@@ -407,16 +406,6 @@ async def runConfig(paramIter: Iterable[IterType],
     print(f"Passed: {n_passes}, Invalid: {n_invalids}, Failed: {len(failures)}")
     return len(failures) == 0
 
-def getArch():
-    agents = set()
-    _, device_count = hip.hipGetDeviceCount()
-    for device in range(device_count):
-        props = hip.hipDeviceProp_t()
-        hip.hipGetDeviceProperties(props,device)
-        agent = props.gcnArchName.decode('utf-8')
-        agents.add(agent) if agent != "gfx000" else None
-
-    return agents
 
 def main() -> bool:
     parser = argparse.ArgumentParser(

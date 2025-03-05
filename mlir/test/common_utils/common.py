@@ -1,8 +1,6 @@
 import os
 import subprocess
 from hip import hip
-from hip import hiprtc
-
 
 # Helper function to decode arch to its features
 # Keep this in sync with mlir/lib/Dialect/Rock/Generator/AmdArchDb.cpp:mlir::rock::lookupArchInfo
@@ -45,19 +43,36 @@ def get_arch_features(arch: str):
     return arch_features, support_mfma, support_wmma
 
 
-def get_agents(rocm_path):
-    if os.name != 'nt':
-        agents = set()
-        _, device_count = hip.hipGetDeviceCount()
-        for device in range(device_count):
-            props = hip.hipDeviceProp_t()
-            hip.hipGetDeviceProperties(props,device)
-            agent = props.gcnArchName.decode('utf-8')
-            agents.add(agent) if agent != "gfx000" else None
+def get_agents():
+    agents = set()
+    err_code, device_count = hip.hipGetDeviceCount()
+    if err_code != hip.hipSuccess:
+        raise Exception(f"Hip call hipGetDeviceCount not successful: {err_code}")
+    for device in range(device_count):
+        props = hip.hipDeviceProp_t()
+        err_code = hip.hipGetDeviceProperties(props,device)
+        if err_code != hip.hipSuccess:
+            raise Exception(f"Hip call hipGetDeviceProperties not successful: {err_code}")
+        agent = props.gcnArchName.decode('utf-8')
+        agents.add(agent)
 
     return agents
-    else:
-        p = subprocess.run([rocm_path + "/bin/amdgpu_arch.exe"],
-                           check=True, stdout=subprocess.PIPE, shell=True)
-        return set(p.stdout.decode("utf-8").split())
 
+
+def is_xdlops_present() -> bool:
+    """This function checks whether a GPU with xdlops support is present"""
+    xdlop_supported_gpus = ['gfx908', 'gfx90a', 'gfx942', 'gfx950']
+    err_code, device_count = hip.hipGetDeviceCount()
+    if err_code != hip.hipSuccess:
+        raise Exception(f"Hip call hipGetDeviceCount not successful: {err_code}")
+    for device in range(device_count):
+        props = hip.hipDeviceProp_t()
+        err_code = hip.hipGetDeviceProperties(props,device)
+        if err_code != hip.hipSuccess:
+            raise Exception(f"Hip call hipGetDeviceProperties not successful: {err_code}")
+        agent = props.gcnArchName.decode('utf-8')
+
+        if agent in xdlop_supported_gpus:
+            return True
+    
+    return False
