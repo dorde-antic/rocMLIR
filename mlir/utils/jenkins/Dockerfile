@@ -91,7 +91,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && python3 -m pip install --upgrade pip \
     && pip3 install pandas numpy scipy jinja2 tomli \
     && pip3 install -r llvm-requirements.txt \
-    && pip3 install -r ../../../requirements.txt
+    && pip3 install -r ../../../requirements.txt \
+    && pip3 install -i https://test.pypi.org/simple hip-python
     # ^ pip install pandas... is needed to output performance tests and regenerate test suites
     # Has a copy of the requirements.txt install bit for the new python version
 
